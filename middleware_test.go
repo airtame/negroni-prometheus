@@ -2,12 +2,12 @@ package negroniprometheus
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/negroni"
 )
 
@@ -18,7 +18,7 @@ func Test_Logger(t *testing.T) {
 	m := NewMiddleware("test")
 	n.Use(m)
 	r := http.NewServeMux()
-	r.Handle("/metrics", prometheus.Handler())
+	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc(`/ok`, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
