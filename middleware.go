@@ -24,6 +24,12 @@ type Middleware struct {
 	latency *prometheus.HistogramVec
 }
 
+type matchKey struct{}
+
+// MatchedRoutePathKey is the request context key under which the handler path
+// match is stored.
+var MatchedRoutePathKey = matchKey{}
+
 // NewMiddleware returns a new prometheus Middleware handler.
 func NewMiddleware(name string, buckets ...float64) *Middleware {
 	var m Middleware
@@ -53,9 +59,18 @@ func NewMiddleware(name string, buckets ...float64) *Middleware {
 }
 
 func (m *Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	var path string
+
+	p, ok := r.Context().Value(MatchedRoutePathKey).(string)
+	if ok {
+		path = p
+	} else {
+		path = r.URL.Path
+	}
+
 	start := time.Now()
 	next(rw, r)
 	res := negroni.NewResponseWriter(rw)
-	m.reqs.WithLabelValues(http.StatusText(res.Status()), r.Method, r.URL.Path).Inc()
-	m.latency.WithLabelValues(http.StatusText(res.Status()), r.Method, r.URL.Path).Observe(float64(time.Since(start).Nanoseconds()) / 1000000)
+	m.reqs.WithLabelValues(http.StatusText(res.Status()), r.Method, path).Inc()
+	m.latency.WithLabelValues(http.StatusText(res.Status()), r.Method, path).Observe(float64(time.Since(start).Nanoseconds()) / 1000000)
 }
